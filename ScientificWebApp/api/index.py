@@ -112,6 +112,19 @@ def perform_fit(req: FitRequest):
     except Exception as e:
          raise HTTPException(status_code=500, detail=str(e))
 
+class GaussRequest(BaseModel):
+    values: List[float]
+
+@app.post("/api/gauss")
+def gauss_analysis(req: GaussRequest):
+    try:
+        if len(req.values) < 2:
+            raise HTTPException(status_code=400, detail="Se necesitan al menos 2 datos")
+        result = logic.fgaus(req.values)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
