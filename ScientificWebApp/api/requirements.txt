@@ -5,3 +5,5 @@ pandas
 matplotlib
 iminuit
 python-multipart
+scipy
+openpyxl
