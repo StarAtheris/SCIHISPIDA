@@ -1,26 +1,29 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { LineChart, Plus, Trash2, Download } from 'lucide-react';
 
 const Fitter = () => {
-    const [points, setPoints] = useState([{ x: 0, y: 0, dx: 0, dy: 0 }]);
-    const [meta, setMeta] = useState({ title: 'Experiment 1', xlabel: 'Volts (V)', ylabel: 'Current (A)' });
+    const [points, setPoints] = useState([
+        { x: '', y: '', dx: '', dy: '' },
+        { x: '', y: '', dx: '', dy: '' },
+        { x: '', y: '', dx: '', dy: '' },
+    ]);
+    const [meta, setMeta] = useState({ title: 'Experimento 1', xlabel: 'Voltaje (V)', ylabel: 'Corriente (A)' });
     const [result, setResult] = useState(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
 
     const updatePoint = (index, field, value) => {
         const newPoints = [...points];
-        newPoints[index][field] = parseFloat(value) || 0;
+        newPoints[index] = { ...newPoints[index], [field]: value };
         setPoints(newPoints);
     };
 
     const addPoint = () => {
-        setPoints([...points, { x: 0, y: 0, dx: 0, dy: 0 }]);
+        setPoints([...points, { x: '', y: '', dx: '', dy: '' }]);
     };
 
     const removePoint = (index) => {
-        if (points.length > 1) {
+        if (points.length > 2) {
             setPoints(points.filter((_, i) => i !== index));
         }
     };
@@ -30,118 +33,124 @@ const Fitter = () => {
         setError(null);
         try {
             const data = {
-                x: points.map(p => p.x),
-                y: points.map(p => p.y),
-                dx: points.map(p => p.dx),
-                dy: points.map(p => p.dy),
-                ...meta
+                x: points.map(p => parseFloat(p.x) || 0),
+                y: points.map(p => parseFloat(p.y) || 0),
+                dx: points.map(p => parseFloat(p.dx) || 0),
+                dy: points.map(p => parseFloat(p.dy) || 0),
+                ...meta,
             };
             const response = await axios.post('/api/fit', data);
             setResult(response.data);
         } catch (err) {
-            setError(err.response?.data?.detail || "Error performing fit");
+            setError(err.response?.data?.detail || 'Error en el ajuste');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <div className="p-6 bg-card rounded-xl shadow-sm border border-border">
-                <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                    <LineChart className="w-6 h-6 text-primary" />
-                    Linear Regression Fit
+        <div className="two-col">
+            {/* Left: Data entry */}
+            <div className="card">
+                <h2 className="card-title">
+                    <div className="card-title-icon">📊</div>
+                    Ajuste Lineal (χ²)
                 </h2>
 
-                <div className="space-y-4 mb-6">
-                    <div className="grid grid-cols-1 gap-4">
+                <div className="meta-inputs">
+                    <input
+                        className="input-field"
+                        placeholder="Título del gráfico"
+                        value={meta.title}
+                        onChange={(e) => setMeta({ ...meta, title: e.target.value })}
+                    />
+                    <div className="meta-row">
                         <input
-                            placeholder="Graph Title"
-                            className="w-full p-2 rounded-md border bg-background"
-                            value={meta.title}
-                            onChange={(e) => setMeta({ ...meta, title: e.target.value })}
+                            className="input-field"
+                            placeholder="Eje X"
+                            value={meta.xlabel}
+                            onChange={(e) => setMeta({ ...meta, xlabel: e.target.value })}
                         />
-                        <div className="grid grid-cols-2 gap-4">
-                            <input
-                                placeholder="X Label"
-                                className="w-full p-2 rounded-md border bg-background"
-                                value={meta.xlabel}
-                                onChange={(e) => setMeta({ ...meta, xlabel: e.target.value })}
-                            />
-                            <input
-                                placeholder="Y Label"
-                                className="w-full p-2 rounded-md border bg-background"
-                                value={meta.ylabel}
-                                onChange={(e) => setMeta({ ...meta, ylabel: e.target.value })}
-                            />
-                        </div>
+                        <input
+                            className="input-field"
+                            placeholder="Eje Y"
+                            value={meta.ylabel}
+                            onChange={(e) => setMeta({ ...meta, ylabel: e.target.value })}
+                        />
                     </div>
                 </div>
 
-                <div className="max-h-[400px] overflow-y-auto pr-2 mb-4 space-y-2">
+                {/* Column headers */}
+                <div className="data-row" style={{ marginBottom: 4 }}>
+                    <span className="row-num">#</span>
+                    <span className="input-label" style={{ flex: 1, textAlign: 'center' }}>x</span>
+                    <span className="input-label" style={{ flex: 1, textAlign: 'center' }}>Δx</span>
+                    <span className="input-label" style={{ flex: 1, textAlign: 'center' }}>y</span>
+                    <span className="input-label" style={{ flex: 1, textAlign: 'center' }}>Δy</span>
+                    <span style={{ width: 32 }}></span>
+                </div>
+
+                <div className="data-scroll">
                     {points.map((p, i) => (
-                        <div key={i} className="flex gap-2 items-center">
-                            <span className="w-6 text-xs text-muted-foreground font-mono">{i + 1}</span>
-                            <input placeholder="x" type="number" className="w-full p-2 rounded border bg-background text-sm" value={p.x} onChange={(e) => updatePoint(i, 'x', e.target.value)} />
-                            <input placeholder="dx" type="number" className="w-full p-2 rounded border bg-background text-sm" value={p.dx} onChange={(e) => updatePoint(i, 'dx', e.target.value)} />
-                            <input placeholder="y" type="number" className="w-full p-2 rounded border bg-background text-sm" value={p.y} onChange={(e) => updatePoint(i, 'y', e.target.value)} />
-                            <input placeholder="dy" type="number" className="w-full p-2 rounded border bg-background text-sm" value={p.dy} onChange={(e) => updatePoint(i, 'dy', e.target.value)} />
-                            <button onClick={() => removePoint(i)} className="text-destructive hover:bg-destructive/10 p-2 rounded">
-                                <Trash2 className="w-4 h-4" />
-                            </button>
+                        <div key={i} className="data-row">
+                            <span className="row-num">{i + 1}</span>
+                            <input className="input-field" type="number" step="any" placeholder="x" value={p.x} onChange={(e) => updatePoint(i, 'x', e.target.value)} />
+                            <input className="input-field" type="number" step="any" placeholder="Δx" value={p.dx} onChange={(e) => updatePoint(i, 'dx', e.target.value)} />
+                            <input className="input-field" type="number" step="any" placeholder="y" value={p.y} onChange={(e) => updatePoint(i, 'y', e.target.value)} />
+                            <input className="input-field" type="number" step="any" placeholder="Δy" value={p.dy} onChange={(e) => updatePoint(i, 'dy', e.target.value)} />
+                            <button onClick={() => removePoint(i)} className="btn-danger-icon" title="Eliminar">✕</button>
                         </div>
                     ))}
                 </div>
 
-                <div className="flex gap-4">
-                    <button onClick={addPoint} className="flex-1 py-2 border border-dashed border-primary/50 text-primary rounded-md hover:bg-primary/5 transition-colors flex justify-center items-center gap-2">
-                        <Plus className="w-4 h-4" /> Add Data Point
-                    </button>
-                    <button onClick={handleFit} disabled={loading} className="flex-1 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors">
-                        {loading ? 'Fitting...' : 'Perform Fit'}
+                <div className="actions-row">
+                    <button onClick={addPoint} className="btn-outline">+ Agregar punto</button>
+                    <button onClick={handleFit} disabled={loading} className="btn-primary" style={{ flex: 1 }}>
+                        {loading ? 'Ajustando...' : 'Realizar Ajuste'}
                     </button>
                 </div>
-                {error && <div className="text-red-500 text-sm mt-2">{error}</div>}
+
+                {error && <div className="error-text">{error}</div>}
             </div>
 
-            <div className="space-y-6">
-                {result && (
+            {/* Right: Results */}
+            <div>
+                {result ? (
                     <>
-                        <div className="p-6 bg-card rounded-xl shadow-sm border border-border">
-                            <h3 className="font-semibold mb-4">Fit Statistics</h3>
-                            <div className="grid grid-cols-2 gap-4 text-sm">
-                                <div className="p-3 bg-muted/20 rounded">
-                                    <div className="text-muted-foreground">Chi2 / NDOF</div>
-                                    <div className="font-mono font-bold text-lg">{result.stats.chi2_ndof.toFixed(4)}</div>
+                        <div className="card" style={{ marginBottom: 20 }}>
+                            <h3 className="section-title">Estadísticas del Ajuste</h3>
+                            <div className="stats-grid">
+                                <div className="stat-card">
+                                    <div className="stat-label">χ² / NDOF</div>
+                                    <div className="stat-value">{result.stats.chi2_ndof.toFixed(4)}</div>
                                 </div>
-                                <div className="p-3 bg-muted/20 rounded">
-                                    <div className="text-muted-foreground">Chi2</div>
-                                    <div className="font-mono">{result.stats.chi2.toFixed(4)}</div>
+                                <div className="stat-card">
+                                    <div className="stat-label">χ²</div>
+                                    <div className="stat-value">{result.stats.chi2.toFixed(4)}</div>
                                 </div>
-                                <div className="p-3 bg-muted/20 rounded col-span-2">
-                                    <div className="text-muted-foreground">Slope (m)</div>
-                                    <div className="font-mono font-bold">
+                                <div className="stat-card wide">
+                                    <div className="stat-label">Pendiente (m)</div>
+                                    <div className="stat-value">
                                         {result.stats.p1.toExponential(4)} ± {result.stats.p1_error.toExponential(4)}
                                     </div>
                                 </div>
-                                <div className="p-3 bg-muted/20 rounded col-span-2">
-                                    <div className="text-muted-foreground">Intercept (c)</div>
-                                    <div className="font-mono font-bold">
+                                <div className="stat-card wide">
+                                    <div className="stat-label">Intercepto (b)</div>
+                                    <div className="stat-value">
                                         {result.stats.p0.toExponential(4)} ± {result.stats.p0_error.toExponential(4)}
                                     </div>
                                 </div>
                             </div>
                         </div>
 
-                        <div className="p-4 bg-white rounded-xl shadow-sm border border-border flex justify-center items-center">
-                            <img src={`data:image/png;base64,${result.image}`} alt="Fit Plot" className="max-w-full h-auto rounded" />
+                        <div className="plot-container">
+                            <img src={`data:image/png;base64,${result.image}`} alt="Gráfico del Ajuste" />
                         </div>
                     </>
-                )}
-                {!result && !loading && (
-                    <div className="h-full flex flex-col items-center justify-center text-muted-foreground p-12 border-2 border-dashed rounded-xl">
-                        <LineChart className="w-12 h-12 mb-4 opacity-20" />
-                        <p>Enter data points and click "Perform Fit"</p>
+                ) : (
+                    <div className="placeholder-box">
+                        <div className="placeholder-icon">📈</div>
+                        <p>Ingresa datos y presiona "Realizar Ajuste"</p>
                     </div>
                 )}
             </div>
